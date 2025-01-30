@@ -1,0 +1,58 @@
+#!/bin/env python3
+import json
+import argparse
+
+# for later reference
+# DalamudBetaKey
+# DalamudBetaKind
+
+# setup parser
+parser = argparse.ArgumentParser(
+    prog='dalamud-beta',
+    description='enable/disable dalamud betas'
+)
+parser.add_argument('-l', '--list', help='list betas then exit', action="store_true")
+parser.add_argument('-e', '--enable', help='enables a beta', action='store_true')
+parser.add_argument('-d', '--disable', help='disables all betas', action='store_true')
+parser.add_argument('-s', '--stream', help='the dev stream to enable')
+parser.add_argument('-k', '--key', help='the beta key to opt into')
+
+# actually run the parser (this should auto handle --help)
+args = parser.parse_args()
+
+# load dalamud config (assuming we're in the right folder)
+try:
+    config = json.load(open('dalamudConfig.json'))
+except :
+    print('error occured. we\'ll figure it out later')
+    raise e
+
+if args.list:
+    from urllib.request import urlopen
+    betas = urlopen('https://raw.githubusercontent.com/goatcorp/dalamud-declarative/refs/heads/main/config.yaml').read()
+    # I'd prefer listing it out fancy like but python doesn't come with a yaml parser and I don't feel like shipping one
+    betas = betas.decode()
+    print(betas)
+    exit()
+
+if args.enable:
+    error = False
+    if not args.stream:
+        print('stream can not be empty')
+        error = True
+    if not args.key:
+        print('key can not be empty')
+        error = True
+    if error:
+        exit()
+
+    config['DalamudBetaKey'] = args.key
+    config['DalamudBetaKind'] = args.stream
+    json.dump(config, open('dalamudConfig.json', 'w'), indent=2)
+    print(f'Successfully opted into {args.stream}.')
+
+if args.disable:
+    config['DalamudBetaKey'] = None
+    config['DalamudBetaKind'] = None
+    json.dump(config, open('dalamudConfig.json', 'w'), indent=2)
+    print('Successfully opted out of betas.')
