@@ -20,12 +20,16 @@ parser.add_argument('-k', '--key', help='the beta key to opt into')
 # actually run the parser (this should auto handle --help)
 args = parser.parse_args()
 
-# load dalamud config (assuming we're in the right folder)
-try:
-    config = json.load(open('dalamudConfig.json'))
-except :
-    print('error occured. we\'ll figure it out later')
-    raise e
+def load_config():
+    try:
+        config = json.load(open('dalamudConfig.json'))
+    except FileNotFoundError:
+        print('No Dalamud config file found in current directory.')
+        exit(1)
+    except Exception as e:
+        print('error occured. we\'ll figure it out later')
+        raise e
+    return config
 
 if args.list:
     from urllib.request import urlopen
@@ -36,6 +40,7 @@ if args.list:
     exit()
 
 if args.enable:
+    config = load_config()
     error = False
     if not args.stream:
         print('stream can not be empty')
@@ -44,7 +49,7 @@ if args.enable:
         print('key can not be empty')
         error = True
     if error:
-        exit()
+        exit(1)
 
     config['DalamudBetaKey'] = args.key
     config['DalamudBetaKind'] = args.stream
@@ -52,6 +57,7 @@ if args.enable:
     print(f'Successfully opted into {args.stream}.')
 
 if args.disable:
+    config = load_config()
     config['DalamudBetaKey'] = None
     config['DalamudBetaKind'] = None
     json.dump(config, open('dalamudConfig.json', 'w'), indent=2)
