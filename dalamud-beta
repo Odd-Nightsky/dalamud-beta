@@ -51,7 +51,7 @@ if __name__ == '__main__':
         if sys == 'Linux':
             dalamud_config_file = f'{os.environ["HOME"]}/.xlcore/dalamudConfig.json'
         else:
-            print(f'Your os \'{sys}\' currently unsupported.')
+            print(f'Your OS \'{sys}\' is currently unsupported.')
 
     if args.op == 'enable' or args.op == 'e':
         config = load_config(dalamud_config_file)
