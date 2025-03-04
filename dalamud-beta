@@ -1,64 +1,79 @@
 #!/bin/env python3
 import json
 import argparse
+import errno
+import os
 
 # for later reference
 # DalamudBetaKey
 # DalamudBetaKind
 
-# setup parser
-parser = argparse.ArgumentParser(
-    prog='dalamud-beta',
-    description='enable/disable dalamud betas'
-)
-parser.add_argument('-l', '--list', help='list betas then exit', action="store_true")
-parser.add_argument('-e', '--enable', help='enables a beta', action='store_true')
-parser.add_argument('-d', '--disable', help='disables all betas', action='store_true')
-parser.add_argument('-s', '--stream', help='the dev stream to enable, defaults to \'stg\'', default='stg')
-parser.add_argument('-k', '--key', help='the beta key to opt into')
-
-# actually run the parser (this should auto handle --help)
-args = parser.parse_args()
-
-def load_config():
+def load_config(file):
     try:
-        config = json.load(open('dalamudConfig.json'))
+        c = json.load(open(file))
     except FileNotFoundError:
-        print('No Dalamud config file found in current directory.')
-        exit(1)
+        print('No such file or directory')
+        exit(errno.ENOENT)
     except Exception as e:
-        print('error occured. we\'ll figure it out later')
+        print('error occured. we’ll figure it out later')
         raise e
-    return config
+    return c
 
-if args.list:
-    from urllib.request import urlopen
-    betas = urlopen('https://raw.githubusercontent.com/goatcorp/dalamud-declarative/refs/heads/main/config.yaml').read()
-    # I'd prefer listing it out fancy like but python doesn't come with a yaml parser and I don't feel like shipping one
-    betas = betas.decode()
-    print(betas)
-    exit()
 
-if args.enable:
-    config = load_config()
-    error = False
-    if not args.stream:
-        print('stream can not be empty')
-        error = True
-    if not args.key:
-        print('key can not be empty')
-        error = True
-    if error:
-        exit(1)
+if __name__ == '__main__':
+    # setup parser
+    parser = argparse.ArgumentParser(
+        prog='dalamud-beta',
+        description='enable/disable dalamud betas'
+    )
+    parser.add_argument('op', help='operation to perform.', choices=['list', 'enable', 'disable', 'l', 'e', 'd'])
+    parser.add_argument('-s', '--stream', help='the dev stream to enable, defaults to \'stg\'', default='stg')
+    parser.add_argument('-k', '--key', help='the beta key to opt into')
+    parser.add_argument('-f', '--file', help='the dalamud config file to edit. by default will try to guess the file based on OS')
 
-    config['DalamudBetaKey'] = args.key
-    config['DalamudBetaKind'] = args.stream
-    json.dump(config, open('dalamudConfig.json', 'w'), indent=2)
-    print(f'Successfully opted into {args.stream}.')
+    # actually run the parser (this should auto handle --help)
+    args = parser.parse_args()
 
-if args.disable:
-    config = load_config()
-    config['DalamudBetaKey'] = None
-    config['DalamudBetaKind'] = None
-    json.dump(config, open('dalamudConfig.json', 'w'), indent=2)
-    print('Successfully opted out of betas.')
+    if args.op == 'list' or args.op == 'l':
+        from urllib.request import urlopen
+        betas = urlopen('https://raw.githubusercontent.com/goatcorp/dalamud-declarative/main/config.yaml').read()
+        # I'd prefer listing it out fancy like but python doesn't come with a yaml parser and I don't feel like shipping one
+        betas = betas.decode()
+        print(betas)
+        exit()
+
+    if args.file:
+        dalamud_config_file = args.file
+    else:
+        # this is where we guess the file to work with based on OS
+        # this code will fail for all kinds of reasons but users can just make github issues lol
+        sys = os.uname().sysname
+        if sys == 'Linux':
+            dalamud_config_file = f'{os.environ["HOME"]}/.xlcore/dalamudConfig.json'
+        else:
+            print(f'Your os \'{sys}\' currently unsupported.')
+
+    if args.op == 'enable' or args.op == 'e':
+        config = load_config(dalamud_config_file)
+        error = False
+        if not args.stream:
+            print('stream can not be empty')
+            error = True
+        if not args.key:
+            print('key can not be empty')
+            error = True
+        if error:
+            exit(errno.EPERM)
+
+        config['DalamudBetaKey'] = args.key
+        config['DalamudBetaKind'] = args.stream
+        json.dump(config, open(dalamud_config_file, 'w'), indent=2)
+        print(f'Successfully opted into {args.stream}.')
+
+    if args.op == 'disable' or args.op == 'd':
+        config = load_config(dalamud_config_file)
+        config['DalamudBetaKey'] = None
+        config['DalamudBetaKind'] = None
+        json.dump(config, open(dalamud_config_file, 'w'), indent=2)
+        print('Successfully opted out of betas.')
+
