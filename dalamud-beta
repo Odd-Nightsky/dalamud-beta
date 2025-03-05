@@ -3,6 +3,7 @@ import json
 import argparse
 import errno
 import os
+import sys
 
 # for later reference
 # DalamudBetaKey
@@ -45,13 +46,28 @@ if __name__ == '__main__':
     if args.file:
         dalamud_config_file = args.file
     else:
+        dalamud_config_file = None
         # this is where we guess the file to work with based on OS
         # this code will fail for all kinds of reasons but users can just make github issues lol
-        sys = os.uname().sysname
-        if sys == 'Linux':
-            dalamud_config_file = f'{os.environ["HOME"]}/.xlcore/dalamudConfig.json'
-        else:
-            print(f'Your OS \'{sys}\' is currently unsupported.')
+        match sys.platform:
+            case 'linux':
+                dalamud_config_file = f'{os.environ["HOME"]}/.xlcore/dalamudConfig.json'
+            case 'darwin':  # macOS
+                print('We do not yet know the default location of the dalamud config for this platform.')
+                print('Please open a github issue or otherwise reach out to me.')
+                print('Alternatively use --file to specify the file location yourself.')
+            case 'win32':  # windows
+                print('We do not yet know the default location of the dalamud config for this platform.')
+                print('Please open a github issue or otherwise reach out to me.')
+                print('Alternatively use --file to specify the file location yourself.')
+            case 'cygwin':  # windows but worse
+                print('Why are you running this through Cygwin? just use normal python smh.')
+            case _:
+                print(f'I didn\'t know you could run XIV on {sys.platform}. Impressive!')
+                print('You\'re on your own. use --file to specify the location of your dalamud config.')
+        if not dalamud_config_file:
+            print('No dalamud config specified. exiting')
+            exit(errno.EPERM)
 
     if args.op == 'enable' or args.op == 'e':
         config = load_config(dalamud_config_file)
